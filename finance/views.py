@@ -1,10 +1,9 @@
 from django.shortcuts import render
-
-# Create your views here.
-from django.shortcuts import render
-
 from django.shortcuts import render
 from .models import Category, Account, Transaction
+from django.views import generic
+from django.urls import reverse_lazy
+from .forms import OwnerRegistrationForm
 
 
 def index(request):
@@ -14,3 +13,8 @@ def index(request):
         "transaction_count": Transaction.objects.count(),
     }
     return render(request, "finance/index.html", context)
+
+class RegisterView(generic.CreateView):
+    form_class = OwnerRegistrationForm
+    template_name = "registration/register.html"
+    success_url = reverse_lazy("login")

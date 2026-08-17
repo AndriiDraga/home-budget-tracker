@@ -5,8 +5,24 @@
     <title>{% block title %}Budget Tracker{% endblock %}</title>
 </head>
 <body>
-    <h1><a href="/">Budget Tracker</a></h1>
+    <header>
+        <a href="{% url 'finance:index' %}">Budget Tracker</a>
+
+        <nav>
+            {% if user.is_authenticated %}
+                <span>Hello, {{ user.username }}</span>
+                <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit">Logout</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}">Login</a>
+                <a href="{% url 'finance:register' %}">Register</a>
+            {% endif %}
+        </nav>
+    </header>
     <hr>
+
     {% block content %}
     {% endblock %}
 </body>
