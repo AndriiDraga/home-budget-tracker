@@ -1,8 +1,8 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from .models import Owner, Transaction, Category, Account
 from django.db import models
 
+from .models import Account, Category, Owner, Transaction
 
 class OwnerRegistrationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
@@ -14,16 +14,12 @@ class TransactionForm(forms.ModelForm):
     class Meta:
         model = Transaction
         fields = ["amount", "description", "date", "category", "account"]
-        widgets = {
-            "date": forms.DateInput(attrs={"type": "date"}),
-        }
+        widgets = {"date": forms.DateInput(attrs={"type": "date"})}
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         if user:
-            # показуємо лише рахунки цього юзера
             self.fields["account"].queryset = Account.objects.filter(owner=user)
-            # показуємо глобальні категорії + власні юзера
             self.fields["category"].queryset = Category.objects.filter(
                 models.Q(owner=user) | models.Q(owner__isnull=True)
             )
@@ -35,13 +31,63 @@ class TransactionForm(forms.ModelForm):
         return amount
 
 
+PERIOD_CHOICES = [
+    ("", "All time"),
+    ("7", "Last 7 days"),
+    ("14", "Last 14 days"),
+    ("30", "Last 30 days"),
+]
+
+
+class TransactionSearchForm(forms.Form):
+    query = forms.CharField(
+        required=False,
+        label="",
+        widget=forms.TextInput(attrs={"placeholder": "Search by description..."}),
+    )
+    category = forms.ModelChoiceField(
+        queryset=Category.objects.all(),
+        required=False,
+        label="",
+        empty_label="All categories",
+    )
+    min_amount = forms.DecimalField(
+        required=False, label="", widget=forms.NumberInput(attrs={"placeholder": "Min amount"})
+    )
+    max_amount = forms.DecimalField(
+        required=False, label="", widget=forms.NumberInput(attrs={"placeholder": "Max amount"})
+    )
+    period = forms.ChoiceField(choices=PERIOD_CHOICES, required=False, label="")
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["category"].queryset = Category.objects.filter(
+                models.Q(owner=user) | models.Q(owner__isnull=True)
+            )
+
 class CategoryForm(forms.ModelForm):
     class Meta:
         model = Category
         fields = ["name", "category_type"]
-        
+
+
+class CategorySearchForm(forms.Form):
+    query = forms.CharField(
+        required=False,
+        label="",
+        widget=forms.TextInput(attrs={"placeholder": "Search by name..."}),
+    )
+    category_type = forms.ChoiceField(
+        choices=[("", "All types"), ("income", "Income"), ("expense", "Expense")],
+        required=False,
+        label="",
+    )
+
 
 class AccountForm(forms.ModelForm):
     class Meta:
         model = Account
         fields = ["name", "account_type", "balance"]
+
+

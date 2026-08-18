@@ -1,12 +1,21 @@
+from datetime import timedelta
+
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import models
 from django.shortcuts import render
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views import generic
 
-from .forms import OwnerRegistrationForm, TransactionForm, CategoryForm, AccountForm
-from .models import Category, Account, Transaction
-from django.db import models
+from .forms import (
+    AccountForm,
+    CategoryForm,
+    OwnerRegistrationForm,
+    TransactionForm,
+    TransactionSearchForm, CategorySearchForm,
+)
+from .models import Account, Category, Transaction
 
 
 @login_required
@@ -31,11 +40,39 @@ class TransactionListView(LoginRequiredMixin, generic.ListView):
     context_object_name = "transaction_list"
     paginate_by = 10
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["search_form"] = TransactionSearchForm(
+            self.request.GET, user=self.request.user
+        )
+        return context
+
     def get_queryset(self):
-        return Transaction.objects.filter(
+        queryset = Transaction.objects.filter(
             account__owner=self.request.user
         ).select_related("category", "account")
 
+        form = TransactionSearchForm(self.request.GET, user=self.request.user)
+        if form.is_valid():
+            query = form.cleaned_data.get("query")
+            category = form.cleaned_data.get("category")
+            min_amount = form.cleaned_data.get("min_amount")
+            max_amount = form.cleaned_data.get("max_amount")
+            period = form.cleaned_data.get("period")
+
+            if query:
+                queryset = queryset.filter(description__icontains=query)
+            if category:
+                queryset = queryset.filter(category=category)
+            if min_amount is not None:
+                queryset = queryset.filter(amount__gte=min_amount)
+            if max_amount is not None:
+                queryset = queryset.filter(amount__lte=max_amount)
+            if period:
+                since = timezone.now().date() - timedelta(days=int(period))
+                queryset = queryset.filter(date__gte=since)
+
+        return queryset
 
 class TransactionCreateView(LoginRequiredMixin, generic.CreateView):
     model = Transaction
@@ -79,11 +116,24 @@ class CategoryListView(LoginRequiredMixin, generic.ListView):
     context_object_name = "category_list"
     paginate_by = 10
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["search_form"] = CategorySearchForm(self.request.GET)
+        return context
+
     def get_queryset(self):
-        # свої категорії + глобальні (owner=None)
-        return Category.objects.filter(
+        queryset = Category.objects.filter(
             models.Q(owner=self.request.user) | models.Q(owner__isnull=True)
         )
+        form = CategorySearchForm(self.request.GET)
+        if form.is_valid():
+            query = form.cleaned_data.get("query")
+            category_type = form.cleaned_data.get("category_type")
+            if query:
+                queryset = queryset.filter(name__icontains=query)
+            if category_type:
+                queryset = queryset.filter(category_type=category_type)
+        return queryset
 
 
 class CategoryCreateView(LoginRequiredMixin, generic.CreateView):
