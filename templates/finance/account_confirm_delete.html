@@ -1,9 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Delete account "{{ object }}"?</h2>
-<form method="post">
-    {% csrf_token %}
-    <button type="submit">Confirm delete</button>
-</form>
-<a href="{% url 'finance:account-list' %}">Cancel</a>
+<h2 class="mb-4">Delete Account</h2>
+<div class="card shadow-sm" style="max-width: 480px;">
+    <div class="card-body">
+        <p>Are you sure you want to delete "<strong>{{ object }}</strong>"?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Confirm delete</button>
+            <a href="{% url 'finance:account-list' %}" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
 {% endblock %}

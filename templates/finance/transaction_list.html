@@ -1,36 +1,48 @@
-<!-- finance/templates/finance/transaction_list.html -->
 {% extends "base.html" %}
 {% block content %}
-<h2>Transactions</h2>
-<a href="{% url 'finance:transaction-create' %}">+ New transaction</a>
-
-<table>
-    <tr>
-        <th>Date</th><th>Amount</th><th>Category</th><th>Account</th><th></th>
-    </tr>
-    {% for transaction in transaction_list %}
-    <tr>
-        <td>{{ transaction.date }}</td>
-        <td>{{ transaction.amount }}</td>
-        <td>{{ transaction.category }}</td>
-        <td>{{ transaction.account }}</td>
-        <td>
-            <a href="{% url 'finance:transaction-update' transaction.pk %}">Edit</a>
-            <a href="{% url 'finance:transaction-delete' transaction.pk %}">Delete</a>
-        </td>
-    </tr>
-    {% endfor %}
-</table>
-
-{% if is_paginated %}
-<div>
-    {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
-    {% endif %}
-    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-    {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}">Next</a>
-    {% endif %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Transactions</h2>
+    <a href="{% url 'finance:transaction-create' %}" class="btn btn-primary">+ New transaction</a>
 </div>
-{% endif %}
+
+<form method="get" class="row g-2 mb-4">
+    <div class="col-md-3">{{ search_form.query }}</div>
+    <div class="col-md-3">{{ search_form.category }}</div>
+    <div class="col-md-2">{{ search_form.min_amount }}</div>
+    <div class="col-md-2">{{ search_form.max_amount }}</div>
+    <div class="col-md-2">{{ search_form.period }}</div>
+    <div class="col-12">
+        <button type="submit" class="btn btn-outline-primary btn-sm">Apply filters</button>
+        <a href="{% url 'finance:transaction-list' %}" class="btn btn-outline-secondary btn-sm">Reset</a>
+    </div>
+</form>
+
+<div class="card shadow-sm">
+    <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Date</th><th>Amount</th><th>Description</th><th>Category</th><th>Account</th><th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for transaction in transaction_list %}
+            <tr>
+                <td>{{ transaction.date }}</td>
+                <td>{{ transaction.amount }}</td>
+                <td>{{ transaction.description }}</td>
+                <td><span class="badge bg-secondary">{{ transaction.category }}</span></td>
+                <td>{{ transaction.account }}</td>
+                <td class="text-end">
+                    <a href="{% url 'finance:transaction-update' transaction.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                    <a href="{% url 'finance:transaction-delete' transaction.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted py-4">No transactions found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include "includes/pagination.html" %}
 {% endblock %}

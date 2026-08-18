@@ -1,22 +1,37 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Accounts</h2>
-<a href="{% url 'finance:account-create' %}">+ New account</a>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Accounts</h2>
+    <a href="{% url 'finance:account-create' %}" class="btn btn-primary">+ New account</a>
+</div>
 
-<table>
-    <tr><th>Name</th><th>Type</th><th>Balance</th><th></th></tr>
-    {% for account in account_list %}
-    <tr>
-        <td>{{ account.name }}</td>
-        <td>{{ account.account_type }}</td>
-        <td>{{ account.balance }}</td>
-        <td>
-            <a href="{% url 'finance:account-update' account.pk %}">Edit</a>
-            <a href="{% url 'finance:account-delete' account.pk %}">Delete</a>
-        </td>
-    </tr>
-    {% endfor %}
-</table>
+<div class="card shadow-sm">
+    <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Balance</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for account in account_list %}
+            <tr>
+                <td>{{ account.name }}</td>
+                <td><span class="badge bg-secondary">{{ account.account_type }}</span></td>
+                <td>{{ account.balance }}</td>
+                <td class="text-end">
+                    <a href="{% url 'finance:account-update' account.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                    <a href="{% url 'finance:account-delete' account.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-4">No accounts yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 {% include "includes/pagination.html" %}
 {% endblock %}
