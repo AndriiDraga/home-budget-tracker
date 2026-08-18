@@ -1,0 +1,26 @@
+<!-- finance/templates/finance/category_list.html -->
+{% extends "base.html" %}
+{% block content %}
+<h2>Categories</h2>
+<a href="{% url 'finance:category-create' %}">+ New category</a>
+
+<table>
+    <tr><th>Name</th><th>Type</th><th></th></tr>
+    {% for category in category_list %}
+    <tr>
+        <td>{{ category.name }}</td>
+        <td>{{ category.category_type }}</td>
+        <td>
+            {% if category.owner %}
+                <a href="{% url 'finance:category-update' category.pk %}">Edit</a>
+                <a href="{% url 'finance:category-delete' category.pk %}">Delete</a>
+            {% else %}
+                <em>default</em>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% include "includes/pagination.html" %}
+{% endblock %}

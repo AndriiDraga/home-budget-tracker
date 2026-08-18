@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Accounts</h2>
+<a href="{% url 'finance:account-create' %}">+ New account</a>
+
+<table>
+    <tr><th>Name</th><th>Type</th><th>Balance</th><th></th></tr>
+    {% for account in account_list %}
+    <tr>
+        <td>{{ account.name }}</td>
+        <td>{{ account.account_type }}</td>
+        <td>{{ account.balance }}</td>
+        <td>
+            <a href="{% url 'finance:account-update' account.pk %}">Edit</a>
+            <a href="{% url 'finance:account-delete' account.pk %}">Delete</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% include "includes/pagination.html" %}
+{% endblock %}

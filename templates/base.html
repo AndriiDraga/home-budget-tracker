@@ -7,22 +7,9 @@
 <body>
     <header>
         <a href="{% url 'finance:index' %}">Budget Tracker</a>
-
-        <nav>
-            {% if user.is_authenticated %}
-                <span>Hello, {{ user.username }}</span>
-                <form method="post" action="{% url 'logout' %}" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit">Logout</button>
-                </form>
-            {% else %}
-                <a href="{% url 'login' %}">Login</a>
-                <a href="{% url 'finance:register' %}">Register</a>
-            {% endif %}
-        </nav>
+        {% include "includes/navbar.html" %}
     </header>
     <hr>
-
     {% block content %}
     {% endblock %}
 </body>

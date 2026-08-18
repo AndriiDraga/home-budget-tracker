@@ -1,0 +1,36 @@
+<!-- finance/templates/finance/transaction_list.html -->
+{% extends "base.html" %}
+{% block content %}
+<h2>Transactions</h2>
+<a href="{% url 'finance:transaction-create' %}">+ New transaction</a>
+
+<table>
+    <tr>
+        <th>Date</th><th>Amount</th><th>Category</th><th>Account</th><th></th>
+    </tr>
+    {% for transaction in transaction_list %}
+    <tr>
+        <td>{{ transaction.date }}</td>
+        <td>{{ transaction.amount }}</td>
+        <td>{{ transaction.category }}</td>
+        <td>{{ transaction.account }}</td>
+        <td>
+            <a href="{% url 'finance:transaction-update' transaction.pk %}">Edit</a>
+            <a href="{% url 'finance:transaction-delete' transaction.pk %}">Delete</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% if is_paginated %}
+<div>
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+    {% endif %}
+    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}">Next</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

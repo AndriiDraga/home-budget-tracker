@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Delete category "{{ object }}"?</h2>
+<h2>Delete account "{{ object }}"?</h2>
 <form method="post">
     {% csrf_token %}
     <button type="submit">Confirm delete</button>
 </form>
-<a href="{% url 'finance:category-list' %}">Cancel</a>
+<a href="{% url 'finance:account-list' %}">Cancel</a>
 {% endblock %}

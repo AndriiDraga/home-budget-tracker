@@ -1,0 +1,15 @@
+<nav>
+    {% if user.is_authenticated %}
+        <span>Hello, {{ user.username }}</span>
+        <a href="{% url 'finance:transaction-list' %}">Transactions</a>
+        <a href="{% url 'finance:category-list' %}">Categories</a>
+        <a href="{% url 'finance:account-list' %}">Accounts</a>
+        <form method="post" action="{% url 'logout' %}" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit">Logout</button>
+        </form>
+    {% else %}
+        <a href="{% url 'login' %}">Login</a>
+        <a href="{% url 'finance:register' %}">Register</a>
+    {% endif %}
+</nav>

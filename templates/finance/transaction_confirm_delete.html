@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Delete transaction "{{ object }}"?</h2>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">Confirm delete</button>
+</form>
+<a href="{% url 'finance:transaction-list' %}">Cancel</a>
+{% endblock %}
