@@ -1,8 +1,11 @@
+from django.utils import timezone
+
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.db import models
 
 from .models import Account, Category, Owner, Transaction
+
 
 class OwnerRegistrationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
@@ -11,6 +14,7 @@ class OwnerRegistrationForm(UserCreationForm):
 
 
 class TransactionForm(forms.ModelForm):
+    
     class Meta:
         model = Transaction
         fields = ["amount", "description", "date", "category", "account"]
@@ -25,10 +29,16 @@ class TransactionForm(forms.ModelForm):
             )
 
     def clean_amount(self):
-        amount = self.cleaned_data["amount"]
-        if amount <= 0:
+        amount = self.cleaned_data.get("amount")
+        if amount is not None and amount <= 0:
             raise forms.ValidationError("Amount must be greater than zero.")
         return amount
+
+    def clean_date(self):
+        date = self.cleaned_data.get("date")
+        if date and date > timezone.now().date():
+            raise forms.ValidationError("Transaction date cannot be in the future.")
+        return date
 
 
 PERIOD_CHOICES = [
@@ -66,10 +76,12 @@ class TransactionSearchForm(forms.Form):
                 models.Q(owner=user) | models.Q(owner__isnull=True)
             )
 
+
 class CategoryForm(forms.ModelForm):
     class Meta:
         model = Category
         fields = ["name", "category_type"]
+
 
 
 class CategorySearchForm(forms.Form):
