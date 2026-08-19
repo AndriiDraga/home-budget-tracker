@@ -4,7 +4,7 @@
 
 {% block content %}
     <h2>It works!</h2>
-    <p>Категорій у базі: {{ category_count }}</p>
-    <p>Рахунків у базі: {{ account_count }}</p>
-    <p>Транзакцій у базі: {{ transaction_count }}</p>
+    <p>Категорій у базі: {{ category_count|default:0  }}</p>
+    <p>Рахунків у базі: {{ account_count|default:0  }}</p>
+    <p>Транзакцій у базі: {{ transaction_count|default:0  }}</p>
 {% endblock %}
