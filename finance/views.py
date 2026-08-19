@@ -20,10 +20,16 @@ from .models import Account, Category, Transaction
 
 @login_required
 def index(request):
+    user = request.user
+
     context = {
-        "category_count": Category.objects.count(),
-        "account_count": Account.objects.count(),
-        "transaction_count": Transaction.objects.count(),
+        "num_categories": Category.objects.filter(
+            models.Q(owner=user) | models.Q(owner__isnull=True)
+        ).count(),
+        "num_accounts": Account.objects.filter(owner=user).count(),
+        "num_transactions": Transaction.objects.filter(
+            account__owner=user
+        ).count(),
     }
     return render(request, "finance/index.html", context)
 
@@ -38,13 +44,40 @@ class TransactionListView(LoginRequiredMixin, generic.ListView):
     model = Transaction
     template_name = "finance/transaction_list.html"
     context_object_name = "transaction_list"
-    paginate_by = 10
+    paginate_by = 3
+
+    def _get_sort_dirs(self):
+        date_dir = self.request.GET.get("date_dir")
+        amount_dir = self.request.GET.get("amount_dir")
+
+        if date_dir not in {"asc", "desc"}:
+            date_dir = None
+        if amount_dir not in {"asc", "desc"}:
+            amount_dir = None
+
+        return date_dir, amount_dir
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
         context["search_form"] = TransactionSearchForm(
             self.request.GET, user=self.request.user
         )
+
+        date_dir, amount_dir = self._get_sort_dirs()
+
+        context["current_date_dir"] = date_dir
+        context["current_amount_dir"] = amount_dir
+
+        context["date_dir_next"] = "desc" if date_dir == "asc" else "asc"
+        context["amount_dir_next"] = "desc" if amount_dir == "asc" else "asc"
+
+        query_params = self.request.GET.copy()
+        query_params.pop("date_dir", None)
+        query_params.pop("amount_dir", None)
+        query_params.pop("page", None)
+        context["query_params"] = query_params.urlencode()
+
         return context
 
     def get_queryset(self):
@@ -71,6 +104,20 @@ class TransactionListView(LoginRequiredMixin, generic.ListView):
             if period:
                 since = timezone.now().date() - timedelta(days=int(period))
                 queryset = queryset.filter(date__gte=since)
+
+        date_dir, amount_dir = self._get_sort_dirs()
+
+        order_fields = []
+
+        if date_dir:
+            order_fields.append("date" if date_dir == "asc" else "-date")
+        if amount_dir:
+            order_fields.append("amount" if amount_dir == "asc" else "-amount")
+
+        if not order_fields:
+            order_fields = ["-date"]
+
+        queryset = queryset.order_by(*order_fields)
 
         return queryset
 
