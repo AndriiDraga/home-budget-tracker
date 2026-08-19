@@ -44,7 +44,7 @@ class TransactionListView(LoginRequiredMixin, generic.ListView):
     model = Transaction
     template_name = "finance/transaction_list.html"
     context_object_name = "transaction_list"
-    paginate_by = 3
+    paginate_by = 5
 
     def _get_sort_dirs(self):
         date_dir = self.request.GET.get("date_dir")
