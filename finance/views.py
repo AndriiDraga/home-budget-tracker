@@ -23,11 +23,11 @@ def index(request):
     user = request.user
 
     context = {
-        "num_categories": Category.objects.filter(
+        "category_count": Category.objects.filter(
             models.Q(owner=user) | models.Q(owner__isnull=True)
         ).count(),
-        "num_accounts": Account.objects.filter(owner=user).count(),
-        "num_transactions": Transaction.objects.filter(
+        "account_count": Account.objects.filter(owner=user).count(),
+        "transaction_count": Transaction.objects.filter(
             account__owner=user
         ).count(),
     }
