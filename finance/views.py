@@ -171,7 +171,7 @@ class CategoryListView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         queryset = Category.objects.filter(
             models.Q(owner=self.request.user) | models.Q(owner__isnull=True)
-        )
+        ).order_by("name")
         form = CategorySearchForm(self.request.GET)
         if form.is_valid():
             query = form.cleaned_data.get("query")
@@ -213,7 +213,7 @@ class CategoryDeleteView(LoginRequiredMixin, generic.DeleteView):
     def get_queryset(self):
         return Category.objects.filter(owner=self.request.user)
 
-# finance/views.py
+
 class AccountListView(LoginRequiredMixin, generic.ListView):
     model = Account
     template_name = "finance/account_list.html"
@@ -221,7 +221,7 @@ class AccountListView(LoginRequiredMixin, generic.ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        return Account.objects.filter(owner=self.request.user)
+        return Account.objects.filter(owner=self.request.user).order_by("name")
 
 
 class AccountCreateView(LoginRequiredMixin, generic.CreateView):
