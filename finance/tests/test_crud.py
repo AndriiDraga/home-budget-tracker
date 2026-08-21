@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from django.urls import reverse
+
 from finance.models import Transaction, Category, Account
 from .base import BaseFinanceTestCase
 
@@ -8,7 +10,7 @@ class TransactionCRUDTest(BaseFinanceTestCase):
 
     def test_create_transaction(self):
         response = self.client.post(
-            "/transactions/create/",
+            reverse("finance:transaction-create"),
             data={
                 "amount": "45.00",
                 "description": "New purchase",
@@ -29,7 +31,7 @@ class TransactionCRUDTest(BaseFinanceTestCase):
             account=self.account,
         )
         self.client.post(
-            f"/transactions/{transaction.pk}/update/",
+            reverse("finance:transaction-update", kwargs={"pk": transaction.pk}),
             data={
                 "amount": "60.00",
                 "description": "Updated description",
@@ -50,7 +52,9 @@ class TransactionCRUDTest(BaseFinanceTestCase):
             category=self.category_expense,
             account=self.account,
         )
-        self.client.post(f"/transactions/{transaction.pk}/delete/")
+        self.client.post(
+            reverse("finance:transaction-delete", kwargs={"pk": transaction.pk})
+        )
         self.assertFalse(Transaction.objects.filter(pk=transaction.pk).exists())
 
 
@@ -58,7 +62,7 @@ class CategoryCRUDTest(BaseFinanceTestCase):
 
     def test_create_category(self):
         response = self.client.post(
-            "/categories/create/",
+            reverse("finance:category-create"),
             data={"name": "Entertainment", "category_type": "expense"},
         )
         self.assertTrue(
@@ -71,7 +75,7 @@ class CategoryCRUDTest(BaseFinanceTestCase):
             name="Old name", category_type="expense", owner=self.user
         )
         self.client.post(
-            f"/categories/{category.pk}/update/",
+            reverse("finance:category-update", kwargs={"pk": category.pk}),
             data={"name": "New name", "category_type": "expense"},
         )
         category.refresh_from_db()
@@ -81,7 +85,9 @@ class CategoryCRUDTest(BaseFinanceTestCase):
         category = Category.objects.create(
             name="To delete", category_type="expense", owner=self.user
         )
-        self.client.post(f"/categories/{category.pk}/delete/")
+        self.client.post(
+            reverse("finance:category-delete", kwargs={"pk": category.pk})
+        )
         self.assertFalse(Category.objects.filter(pk=category.pk).exists())
 
 
@@ -89,7 +95,7 @@ class AccountCRUDTest(BaseFinanceTestCase):
 
     def test_create_account(self):
         response = self.client.post(
-            "/accounts/create/",
+            reverse("finance:account-create"),
             data={
                 "name": "New savings",
                 "account_type": "savings",
@@ -103,7 +109,7 @@ class AccountCRUDTest(BaseFinanceTestCase):
 
     def test_update_own_account(self):
         self.client.post(
-            f"/accounts/{self.account.pk}/update/",
+            reverse("finance:account-update", kwargs={"pk": self.account.pk}),
             data={
                 "name": "Renamed card",
                 "account_type": "card",
@@ -114,5 +120,7 @@ class AccountCRUDTest(BaseFinanceTestCase):
         self.assertEqual(self.account.name, "Renamed card")
 
     def test_delete_own_account(self):
-        self.client.post(f"/accounts/{self.account.pk}/delete/")
+        self.client.post(
+            reverse("finance:account-delete", kwargs={"pk": self.account.pk})
+        )
         self.assertFalse(Account.objects.filter(pk=self.account.pk).exists())
