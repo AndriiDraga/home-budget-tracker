@@ -1,8 +1,12 @@
-from django.utils import timezone
+from datetime import date
+from decimal import Decimal
+from typing import Any
 
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.db import models
+from django.http import HttpRequest
+from django.utils import timezone
 
 from .models import Account, Category, Owner, Transaction
 
@@ -14,31 +18,41 @@ class OwnerRegistrationForm(UserCreationForm):
 
 
 class TransactionForm(forms.ModelForm):
-    
+
     class Meta:
         model = Transaction
         fields = ["amount", "description", "date", "category", "account"]
         widgets = {"date": forms.DateInput(attrs={"type": "date"})}
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(
+        self,
+        *args: Any,
+        user: Owner | None = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(*args, **kwargs)
+
         if user:
             self.fields["account"].queryset = Account.objects.filter(owner=user)
             self.fields["category"].queryset = Category.objects.filter(
                 models.Q(owner=user) | models.Q(owner__isnull=True)
             )
 
-    def clean_amount(self):
-        amount = self.cleaned_data.get("amount")
+    def clean_amount(self) -> Decimal | None:
+        amount: Decimal | None = self.cleaned_data.get("amount")
+
         if amount is not None and amount <= 0:
             raise forms.ValidationError("Amount must be greater than zero.")
+
         return amount
 
-    def clean_date(self):
-        date = self.cleaned_data.get("date")
-        if date and date > timezone.now().date():
+    def clean_date(self) -> date | None:
+        transaction_date: date | None = self.cleaned_data.get("date")
+
+        if transaction_date and transaction_date > timezone.now().date():
             raise forms.ValidationError("Transaction date cannot be in the future.")
-        return date
+
+        return transaction_date
 
 
 PERIOD_CHOICES = [
@@ -62,15 +76,29 @@ class TransactionSearchForm(forms.Form):
         empty_label="All categories",
     )
     min_amount = forms.DecimalField(
-        required=False, label="", widget=forms.NumberInput(attrs={"placeholder": "Min amount"})
+        required=False,
+        label="",
+        widget=forms.NumberInput(attrs={"placeholder": "Min amount"}),
     )
     max_amount = forms.DecimalField(
-        required=False, label="", widget=forms.NumberInput(attrs={"placeholder": "Max amount"})
+        required=False,
+        label="",
+        widget=forms.NumberInput(attrs={"placeholder": "Max amount"}),
     )
-    period = forms.ChoiceField(choices=PERIOD_CHOICES, required=False, label="")
+    period = forms.ChoiceField(
+        choices=PERIOD_CHOICES,
+        required=False,
+        label="",
+    )
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(
+        self,
+        *args: Any,
+        user: Owner | None = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(*args, **kwargs)
+
         if user:
             self.fields["category"].queryset = Category.objects.filter(
                 models.Q(owner=user) | models.Q(owner__isnull=True)
@@ -81,7 +109,6 @@ class CategoryForm(forms.ModelForm):
     class Meta:
         model = Category
         fields = ["name", "category_type"]
-
 
 
 class CategorySearchForm(forms.Form):

@@ -1,8 +1,11 @@
 from datetime import timedelta
+from typing import Any
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import models
+from django.db.models import QuerySet
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -19,10 +22,10 @@ from .models import Account, Category, Transaction
 
 
 @login_required
-def index(request):
+def index(request: HttpRequest) -> HttpResponse:
     user = request.user
 
-    context = {
+    context: dict[str, int] = {
         "category_count": Category.objects.filter(
             models.Q(owner=user) | models.Q(owner__isnull=True)
         ).count(),
@@ -46,7 +49,7 @@ class TransactionListView(LoginRequiredMixin, generic.ListView):
     context_object_name = "transaction_list"
     paginate_by = 5
 
-    def _get_sort_dirs(self):
+    def _get_sort_dirs(self) -> tuple[str | None, str | None]:
         date_dir = self.request.GET.get("date_dir")
         amount_dir = self.request.GET.get("amount_dir")
 
@@ -57,7 +60,7 @@ class TransactionListView(LoginRequiredMixin, generic.ListView):
 
         return date_dir, amount_dir
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
 
         context["search_form"] = TransactionSearchForm(
@@ -80,7 +83,7 @@ class TransactionListView(LoginRequiredMixin, generic.ListView):
 
         return context
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Transaction]:
         queryset = Transaction.objects.filter(
             account__owner=self.request.user
         ).select_related("category", "account")
@@ -107,7 +110,7 @@ class TransactionListView(LoginRequiredMixin, generic.ListView):
 
         date_dir, amount_dir = self._get_sort_dirs()
 
-        order_fields = []
+        order_fields: list[str] = []
 
         if date_dir:
             order_fields.append("date" if date_dir == "asc" else "-date")
@@ -127,7 +130,7 @@ class TransactionCreateView(LoginRequiredMixin, generic.CreateView):
     template_name = "finance/transaction_form.html"
     success_url = reverse_lazy("finance:transaction-list")
 
-    def get_form_kwargs(self):
+    def get_form_kwargs(self) -> dict[str, Any]:
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
         return kwargs
@@ -139,12 +142,12 @@ class TransactionUpdateView(LoginRequiredMixin, generic.UpdateView):
     template_name = "finance/transaction_form.html"
     success_url = reverse_lazy("finance:transaction-list")
 
-    def get_form_kwargs(self):
+    def get_form_kwargs(self) -> dict[str, Any]:
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
         return kwargs
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Transaction]:
         return Transaction.objects.filter(account__owner=self.request.user)
 
 
@@ -153,7 +156,7 @@ class TransactionDeleteView(LoginRequiredMixin, generic.DeleteView):
     template_name = "finance/transaction_confirm_delete.html"
     success_url = reverse_lazy("finance:transaction-list")
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Transaction]:
         return Transaction.objects.filter(account__owner=self.request.user)
 
 
@@ -163,12 +166,12 @@ class CategoryListView(LoginRequiredMixin, generic.ListView):
     context_object_name = "category_list"
     paginate_by = 10
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context["search_form"] = CategorySearchForm(self.request.GET)
         return context
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Category]:
         queryset = Category.objects.filter(
             models.Q(owner=self.request.user) | models.Q(owner__isnull=True)
         ).order_by("name")
@@ -189,7 +192,7 @@ class CategoryCreateView(LoginRequiredMixin, generic.CreateView):
     template_name = "finance/category_form.html"
     success_url = reverse_lazy("finance:category-list")
 
-    def form_valid(self, form):
+    def form_valid(self, form: CategoryForm) -> HttpResponse:
         form.instance.owner = self.request.user
         return super().form_valid(form)
 
@@ -200,7 +203,7 @@ class CategoryUpdateView(LoginRequiredMixin, generic.UpdateView):
     template_name = "finance/category_form.html"
     success_url = reverse_lazy("finance:category-list")
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Category]:
         # редагувати можна тільки свої категорії, не глобальні
         return Category.objects.filter(owner=self.request.user)
 
@@ -210,7 +213,7 @@ class CategoryDeleteView(LoginRequiredMixin, generic.DeleteView):
     template_name = "finance/category_confirm_delete.html"
     success_url = reverse_lazy("finance:category-list")
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Category]:
         return Category.objects.filter(owner=self.request.user)
 
 
@@ -220,7 +223,7 @@ class AccountListView(LoginRequiredMixin, generic.ListView):
     context_object_name = "account_list"
     paginate_by = 10
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Account]:
         return Account.objects.filter(owner=self.request.user).order_by("name")
 
 
@@ -230,7 +233,7 @@ class AccountCreateView(LoginRequiredMixin, generic.CreateView):
     template_name = "finance/account_form.html"
     success_url = reverse_lazy("finance:account-list")
 
-    def form_valid(self, form):
+    def form_valid(self, form: AccountForm) -> HttpResponse:
         form.instance.owner = self.request.user
         return super().form_valid(form)
 
@@ -241,7 +244,7 @@ class AccountUpdateView(LoginRequiredMixin, generic.UpdateView):
     template_name = "finance/account_form.html"
     success_url = reverse_lazy("finance:account-list")
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Account]:
         return Account.objects.filter(owner=self.request.user)
 
 
@@ -250,5 +253,5 @@ class AccountDeleteView(LoginRequiredMixin, generic.DeleteView):
     template_name = "finance/account_confirm_delete.html"
     success_url = reverse_lazy("finance:account-list")
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Account]:
         return Account.objects.filter(owner=self.request.user)
