@@ -124,6 +124,7 @@ class TransactionListView(LoginRequiredMixin, generic.ListView):
 
         return queryset
 
+
 class TransactionCreateView(LoginRequiredMixin, generic.CreateView):
     model = Transaction
     form_class = TransactionForm

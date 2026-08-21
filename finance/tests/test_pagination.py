@@ -31,6 +31,7 @@ class TransactionPaginationTest(BaseFinanceTestCase):
         )
         self.assertEqual(len(response.context["transaction_list"]), 5)
 
+
 class CategoryPaginationTest(BaseFinanceTestCase):
 
     def setUp(self):

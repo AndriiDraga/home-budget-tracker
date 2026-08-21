@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
+
 class Owner(AbstractUser):
     pass
 
@@ -46,7 +47,6 @@ class Transaction(models.Model):
         on_delete=models.CASCADE,
         related_name="transactions",
     )
-
 
     def __str__(self):
         return f"{self.amount} - {self.description}"

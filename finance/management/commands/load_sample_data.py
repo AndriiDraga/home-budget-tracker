@@ -21,14 +21,22 @@ class Command(BaseCommand):
             owner=admin,
             defaults={"account_type": "card", "balance": 1500},
         )
-        self.stdout.write(self.style.SUCCESS(f"Account: {account.name} ({'created' if created else 'exists'})"))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Account: {account.name} ({'created' if created else 'exists'})"
+            )
+        )
 
         savings, created = Account.objects.get_or_create(
             name="Savings",
             owner=admin,
             defaults={"account_type": "savings", "balance": 3000},
         )
-        self.stdout.write(self.style.SUCCESS(f"Account: {savings.name} ({'created' if created else 'exists'})"))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Account: {savings.name} ({'created' if created else 'exists'})"
+            )
+        )
 
         today = timezone.now().date()
 
@@ -48,7 +56,11 @@ class Command(BaseCommand):
             try:
                 category = Category.objects.get(name=category_name, owner__isnull=True)
             except Category.DoesNotExist:
-                self.stdout.write(self.style.WARNING(f"Category '{category_name}' not found, skipping."))
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"Category '{category_name}' not found, skipping."
+                    )
+                )
                 continue
 
             _, created = Transaction.objects.get_or_create(
