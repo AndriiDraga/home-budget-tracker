@@ -1,0 +1,17 @@
+<div class="d-flex align-items-center gap-3">
+    {% if user.is_authenticated %}
+        <ul class="navbar-nav flex-row gap-3">
+            <li class="nav-item"><a class="nav-link text-light" href="{% url 'finance:transaction-list' %}">Transactions</a></li>
+            <li class="nav-item"><a class="nav-link text-light" href="{% url 'finance:category-list' %}">Categories</a></li>
+            <li class="nav-item"><a class="nav-link text-light" href="{% url 'finance:account-list' %}">Accounts</a></li>
+        </ul>
+        <span class="text-light ms-auto me-3">Hello, {{ user.username }}</span>
+        <form method="post" action="{% url 'logout' %}" class="mb-0">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
+        </form>
+    {% else %}
+        <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm ms-auto">Login</a>
+        <a href="{% url 'finance:register' %}" class="btn btn-light btn-sm">Register</a>
+    {% endif %}
+</div>

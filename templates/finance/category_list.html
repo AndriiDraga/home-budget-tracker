@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Categories</h2>
+    <a href="{% url 'finance:category-create' %}" class="btn btn-primary">+ New category</a>
+</div>
+
+<form method="get" class="row g-2 mb-4">
+    <div class="col-md-4">{{ search_form.query }}</div>
+    <div class="col-md-3">{{ search_form.category_type }}</div>
+    <div class="col-12">
+        <button type="submit" class="btn btn-outline-primary btn-sm">Apply filters</button>
+        <a href="{% url 'finance:category-list' %}" class="btn btn-outline-secondary btn-sm">Reset</a>
+    </div>
+</form>
+
+<div class="card shadow-sm">
+    <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for category in category_list %}
+            <tr>
+                <td>{{ category.name }}</td>
+                <td><span class="badge bg-secondary">{{ category.category_type }}</span></td>
+                <td class="text-end">
+                    {% if category.owner %}
+                        <a href="{% url 'finance:category-update' category.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                        <a href="{% url 'finance:category-delete' category.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                    {% else %}
+                        <span class="text-muted fst-italic">default</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-muted py-4">No categories found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include "includes/pagination.html" %}
+{% endblock %}'
