@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Owner, Category, Account, Transaction
+from finance.models import Owner, Category, Account, Transaction
 
 admin.site.register(Owner, UserAdmin)
 admin.site.register(Category)

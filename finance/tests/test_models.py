@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from finance.models import Transaction
-from .base import BaseFinanceTestCase
+from finance.tests.base import BaseFinanceTestCase
 
 
 class ModelTest(BaseFinanceTestCase):

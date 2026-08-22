@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from finance.models import Transaction
-from .base import BaseFinanceTestCase
+from finance.tests.base import BaseFinanceTestCase
 
 
 class TransactionSearchTest(BaseFinanceTestCase):

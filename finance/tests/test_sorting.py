@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.urls import reverse
 
 from finance.models import Transaction
-from .base import BaseFinanceTestCase
+from finance.tests.base import BaseFinanceTestCase
 
 
 class TransactionSortingTest(BaseFinanceTestCase):

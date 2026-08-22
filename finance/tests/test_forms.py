@@ -1,5 +1,5 @@
 from finance.forms import TransactionForm
-from .base import BaseFinanceTestCase
+from finance.tests.base import BaseFinanceTestCase
 
 
 class TransactionFormValidationTest(BaseFinanceTestCase):

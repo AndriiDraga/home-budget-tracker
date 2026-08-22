@@ -11,14 +11,14 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import generic
 
-from .forms import (
+from finance.forms import (
     AccountForm,
     CategoryForm,
     OwnerRegistrationForm,
     TransactionForm,
     TransactionSearchForm, CategorySearchForm,
 )
-from .models import Account, Category, Transaction
+from finance.models import Account, Category, Transaction
 
 
 @login_required

@@ -7,7 +7,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.db import models
 from django.utils import timezone
 
-from .models import Account, Category, Owner, Transaction
+from finance.models import Account, Category, Owner, Transaction
 
 
 class OwnerRegistrationForm(UserCreationForm):

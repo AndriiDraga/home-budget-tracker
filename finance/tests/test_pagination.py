@@ -4,7 +4,7 @@ from django.db import models
 from django.urls import reverse
 
 from finance.models import Transaction, Category, Account
-from .base import BaseFinanceTestCase
+from finance.tests.base import BaseFinanceTestCase
 
 
 class TransactionPaginationTest(BaseFinanceTestCase):

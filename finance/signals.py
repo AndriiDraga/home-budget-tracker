@@ -2,7 +2,7 @@ from django.db.models import F
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 
-from .models import Transaction, Account
+from finance.models import Transaction, Account
 
 
 def _get_effect(amount, category_type):
