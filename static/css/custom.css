@@ -16,3 +16,36 @@ form select:focus {
     outline: 0;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
+.dashboard-metric-card .metric-label {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.dashboard-metric-card .metric-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.dashboard-metric-card .metric-value.metric-expense {
+    color: #dc3545;
+}
+
+.dashboard-metric-card .metric-value.metric-income {
+    color: #198754;
+}
+
+.dashboard-chart-wrap {
+    position: relative;
+    height: 220px;
+    width: 100%;
+}
+
+.dashboard-amount-expense {
+    color: #dc3545;
+}
+
+.dashboard-amount-income {
+    color: #198754;
+}
+ 
