@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4">Dashboard</h2>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100 dashboard-metric-card">
+                <div class="card-body">
+                    <div class="metric-label text-muted mb-1">Total Expenses</div>
+                    <div class="metric-value metric-expense">${{ total_expense|floatformat:2|intcomma }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100 dashboard-metric-card">
+                <div class="card-body">
+                    <div class="metric-label text-muted mb-1">Total Income</div>
+                    <div class="metric-value metric-income">${{ total_income|floatformat:2|intcomma }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100 dashboard-metric-card">
+                <div class="card-body">
+                    <div class="metric-label text-muted mb-1">Budget Remaining</div>
+                    <div class="metric-value">${{ total_balance|floatformat:2|intcomma }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100 dashboard-metric-card">
+                <div class="card-body">
+                    <div class="metric-label text-muted mb-1">Transactions</div>
+                    <div class="metric-value">{{ transaction_count }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-lg-3">
+            <div class="card shadow-sm h-100 dashboard-chart-card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Expenses by Category</h5>
+                    {% if expense_category_labels %}
+                        <div class="dashboard-chart-wrap">
+                            <canvas id="expenseCategoryChart"></canvas>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No expense data yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-3">
+            <div class="card shadow-sm h-100 dashboard-chart-card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Income by Category</h5>
+                    {% if income_category_labels %}
+                        <div class="dashboard-chart-wrap">
+                            <canvas id="incomeCategoryChart"></canvas>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No income data yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm h-100 dashboard-chart-card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Expense Trends</h5>
+                    {% if trend_labels %}
+                        <div class="dashboard-chart-wrap">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">Not enough data for the last 6 months.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Recent Transactions</h5>
+            {% if recent_transactions %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in recent_transactions %}
+                        <tr>
+                            <td>{{ transaction.description }}</td>
+                            <td>{{ transaction.category.name }}</td>
+                            <td class="{% if transaction.category.category_type == 'expense' %}dashboard-amount-expense{% else %}dashboard-amount-income{% endif %}">
+                                {% if transaction.category.category_type == 'expense' %}-{% else %}+{% endif %}${{ transaction.amount }}
+                            </td>
+                            <td>{{ transaction.date }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">No transactions yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{{ expense_category_labels|json_script:"expense-category-labels" }}
+{{ expense_category_totals|json_script:"expense-category-totals" }}
+{{ income_category_labels|json_script:"income-category-labels" }}
+{{ income_category_totals|json_script:"income-category-totals" }}
+{{ trend_labels|json_script:"trend-labels" }}
+{{ trend_expense|json_script:"trend-expense" }}
+{{ trend_income|json_script:"trend-income" }}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const expenseCategoryLabels = JSON.parse(document.getElementById("expense-category-labels").textContent);
+        const expenseCategoryTotals = JSON.parse(document.getElementById("expense-category-totals").textContent);
+        const incomeCategoryLabels = JSON.parse(document.getElementById("income-category-labels").textContent);
+        const incomeCategoryTotals = JSON.parse(document.getElementById("income-category-totals").textContent);
+        const trendLabels = JSON.parse(document.getElementById("trend-labels").textContent);
+        const trendExpense = JSON.parse(document.getElementById("trend-expense").textContent);
+        const trendIncome = JSON.parse(document.getElementById("trend-income").textContent);
+
+        const donutColors = [
+            "#dc3545", "#fd7e14", "#6f42c1", "#20c997",
+            "#0d6efd", "#6c757d", "#ffc107", "#0dcaf0",
+            "#198754", "#d63384",
+        ];
+
+        const expenseCategoryCanvas = document.getElementById("expenseCategoryChart");
+        if (expenseCategoryCanvas) {
+            new Chart(expenseCategoryCanvas, {
+                type: "doughnut",
+                data: {
+                    labels: expenseCategoryLabels,
+                    datasets: [{
+                        data: expenseCategoryTotals,
+                        backgroundColor: donutColors,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: "bottom" } },
+                },
+            });
+        }
+
+        const incomeCategoryCanvas = document.getElementById("incomeCategoryChart");
+        if (incomeCategoryCanvas) {
+            new Chart(incomeCategoryCanvas, {
+                type: "doughnut",
+                data: {
+                    labels: incomeCategoryLabels,
+                    datasets: [{
+                        data: incomeCategoryTotals,
+                        backgroundColor: donutColors,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: "bottom" } },
+                },
+            });
+        }
+
+        const trendCanvas = document.getElementById("trendChart");
+        if (trendCanvas) {
+            new Chart(trendCanvas, {
+                type: "line",
+                data: {
+                    labels: trendLabels,
+                    datasets: [
+                        {
+                            label: "Expenses",
+                            data: trendExpense,
+                            borderColor: "#dc3545",
+                            backgroundColor: "rgba(220, 53, 69, 0.15)",
+                            fill: true,
+                            tension: 0.3,
+                        },
+                        {
+                            label: "Income",
+                            data: trendIncome,
+                            borderColor: "#198754",
+                            backgroundColor: "rgba(25, 135, 84, 0.15)",
+                            fill: true,
+                            tension: 0.3,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: "bottom" } },
+                    scales: { y: { beginAtZero: true } },
+                },
+            });
+        }
+    });
+</script>
+{% endblock %}

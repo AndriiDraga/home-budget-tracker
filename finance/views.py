@@ -3,6 +3,8 @@ from typing import Any
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import TemplateView
+from django.db.models.functions import TruncWeek
 from django.db import models
 from django.db.models import QuerySet
 from django.http import HttpRequest, HttpResponse
@@ -10,6 +12,8 @@ from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import generic
+from django.db.models import Sum
+
 
 from finance.forms import (
     AccountForm,
@@ -256,3 +260,96 @@ class AccountDeleteView(LoginRequiredMixin, generic.DeleteView):
 
     def get_queryset(self) -> QuerySet[Account]:
         return Account.objects.filter(owner=self.request.user)
+
+
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = "finance/dashboard.html"
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+
+        transactions = Transaction.objects.filter(account__owner=user)
+
+        total_expense = (
+                transactions.filter(
+                    category__category_type="expense").aggregate(total=Sum("amount")
+                                                                 )["total"]
+                or 0
+        )
+        total_income = (
+                transactions.filter(
+                    category__category_type="income").aggregate(total=Sum("amount")
+                                                                )["total"]
+                or 0
+        )
+        total_balance = (
+                Account.objects.filter(owner=user).aggregate(total=Sum("balance"))["total"] or 0
+        )
+
+        # Розбивка витрат по категоріях (для donut-чарту витрат)
+        expense_breakdown = list(
+            transactions.filter(category__category_type="expense")
+            .values("category__name")
+            .annotate(total=Sum("amount"))
+            .order_by("-total")
+        )
+
+        # Розбивка доходів по категоріях (для donut-чарту доходів)
+        income_breakdown = list(
+            transactions.filter(category__category_type="income")
+            .values("category__name")
+            .annotate(total=Sum("amount"))
+            .order_by("-total")
+        )
+
+        # Тренд доходів/витрат по тижнях за останні 12 тижнів (для лінійного графіка)
+        weeks_back = 12
+        period_start = timezone.now().date() - timedelta(weeks=weeks_back)
+        weekly = (
+            transactions.filter(date__gte=period_start)
+            .annotate(week=TruncWeek("date"))
+            .values("week", "category__category_type")
+            .annotate(total=Sum("amount"))
+            .order_by("week")
+        )
+
+        # Повний ряд тижнів, включно з тими, де не було жодної транзакції (нуль)
+        first_monday = period_start - timedelta(days=period_start.weekday())
+        today_monday = timezone.now().date() - timedelta(days=timezone.now().date().weekday())
+        weeks = []
+        current = first_monday
+        while current <= today_monday:
+            weeks.append(current)
+            current += timedelta(weeks=1)
+
+        expense_by_week = {w: 0.0 for w in weeks}
+        income_by_week = {w: 0.0 for w in weeks}
+        for row in weekly:
+            week_key = row["week"]
+            if week_key not in expense_by_week:
+                continue
+            if row["category__category_type"] == "expense":
+                expense_by_week[week_key] = float(row["total"])
+            elif row["category__category_type"] == "income":
+                income_by_week[week_key] = float(row["total"])
+
+        context.update(
+            {
+                "total_expense": total_expense,
+                "total_income": total_income,
+                "total_balance": total_balance,
+                "transaction_count": transactions.count(),
+                "expense_category_labels": [row["category__name"] for row in expense_breakdown],
+                "expense_category_totals": [float(row["total"]) for row in expense_breakdown],
+                "income_category_labels": [row["category__name"] for row in income_breakdown],
+                "income_category_totals": [float(row["total"]) for row in income_breakdown],
+                "trend_labels": [w.strftime("%d %b") for w in weeks],
+                "trend_expense": [expense_by_week[w] for w in weeks],
+                "trend_income": [income_by_week[w] for w in weeks],
+                "recent_transactions": transactions.select_related("category", "account").order_by(
+                    "-date"
+                )[:8],
+            }
+        )
+        return context
