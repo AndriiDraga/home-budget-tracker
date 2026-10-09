@@ -2,7 +2,7 @@ from django.db.models import F
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 
-from finance.models import Transaction, Account
+from finance.models import AccountMembership, Transaction, Account
 
 
 def _get_effect(amount, category_type):
@@ -41,4 +41,16 @@ def rollback_deleted_transaction_effect(sender, instance, **kwargs):
 
     Account.objects.filter(pk=instance.account_id).update(
         balance=F("balance") - effect
+    )
+
+
+@receiver(post_save, sender=Account)
+def create_owner_membership(sender, instance, created, **kwargs):
+    if not created:
+        return
+
+    AccountMembership.objects.get_or_create(
+        account=instance,
+        user=instance.owner,
+        defaults={"role": AccountMembership.Role.OWNER},
     )
