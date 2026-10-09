@@ -32,7 +32,9 @@ class TransactionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if user:
-            self.fields["account"].queryset = Account.objects.filter(owner=user)
+            self.fields["account"].queryset = Account.objects.filter(
+                memberships__user=user
+            ).distinct()
             self.fields["category"].queryset = Category.objects.filter(
                 models.Q(owner=user) | models.Q(owner__isnull=True)
             )
@@ -127,3 +129,11 @@ class AccountForm(forms.ModelForm):
     class Meta:
         model = Account
         fields = ["name", "account_type", "balance"]
+
+
+class AccountInvitationForm(forms.Form):
+    username_or_email = forms.CharField(
+        max_length=254,
+        label="Username or email",
+        widget=forms.TextInput(attrs={"autocomplete": "off"}),
+    )

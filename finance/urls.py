@@ -39,6 +39,25 @@ urlpatterns = [
 
     path("accounts/", views.AccountListView.as_view(), name="account-list"),
     path("accounts/create/", views.AccountCreateView.as_view(), name="account-create"),
+    path("accounts/<int:pk>/", views.AccountDetailView.as_view(), name="account-detail"),
+    path("accounts/<int:pk>/invite/", views.AccountInviteView.as_view(), name="account-invite"),
+    path("accounts/<int:pk>/members/", views.AccountMembersView.as_view(), name="account-members"),
+    path(
+        "accounts/<int:account_pk>/members/<int:membership_pk>/remove/",
+        views.AccountMemberRemoveView.as_view(),
+        name="account-member-remove",
+    ),
     path("accounts/<int:pk>/update/", views.AccountUpdateView.as_view(), name="account-update"),
     path("accounts/<int:pk>/delete/", views.AccountDeleteView.as_view(), name="account-delete"),
+    path("invitations/", views.InvitationListView.as_view(), name="invitation-list"),
+    path(
+        "invitations/<int:pk>/accept/",
+        views.InvitationAcceptView.as_view(),
+        name="invitation-accept",
+    ),
+    path(
+        "invitations/<int:pk>/reject/",
+        views.InvitationRejectView.as_view(),
+        name="invitation-reject",
+    ),
 ]

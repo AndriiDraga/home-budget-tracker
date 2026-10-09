@@ -4,11 +4,13 @@ from typing import Any
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
+from django.contrib import messages
+from django.db import transaction as db_transaction
 from django.db.models.functions import TruncWeek
 from django.db import models
 from django.db.models import QuerySet
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import generic
@@ -17,12 +19,40 @@ from django.db.models import Sum
 
 from finance.forms import (
     AccountForm,
+    AccountInvitationForm,
     CategoryForm,
     OwnerRegistrationForm,
     TransactionForm,
     TransactionSearchForm, CategorySearchForm,
 )
-from finance.models import Account, Category, Transaction
+from finance.models import (
+    Account,
+    AccountInvitation,
+    AccountMembership,
+    Category,
+    Owner,
+    Transaction,
+)
+
+
+GENERIC_INVITATION_RESPONSE = (
+    "If a matching user exists and can be invited, the invitation has been created."
+)
+
+
+def accounts_for_user(user: Owner) -> QuerySet[Account]:
+    return Account.objects.filter(memberships__user=user).distinct()
+
+
+def owner_accounts_for_user(user: Owner) -> QuerySet[Account]:
+    return Account.objects.filter(
+        memberships__user=user,
+        memberships__role=AccountMembership.Role.OWNER,
+    ).distinct()
+
+
+def transactions_for_user(user: Owner) -> QuerySet[Transaction]:
+    return Transaction.objects.filter(account__memberships__user=user).distinct()
 
 
 @login_required
@@ -33,10 +63,8 @@ def index(request: HttpRequest) -> HttpResponse:
         "category_count": Category.objects.filter(
             models.Q(owner=user) | models.Q(owner__isnull=True)
         ).count(),
-        "account_count": Account.objects.filter(owner=user).count(),
-        "transaction_count": Transaction.objects.filter(
-            account__owner=user
-        ).count(),
+        "account_count": accounts_for_user(user).count(),
+        "transaction_count": transactions_for_user(user).count(),
     }
     return render(request, "finance/index.html", context)
 
@@ -88,9 +116,9 @@ class TransactionListView(LoginRequiredMixin, generic.ListView):
         return context
 
     def get_queryset(self) -> QuerySet[Transaction]:
-        queryset = Transaction.objects.filter(
-            account__owner=self.request.user
-        ).select_related("category", "account")
+        queryset = transactions_for_user(self.request.user).select_related(
+            "category", "account"
+        )
 
         form = TransactionSearchForm(self.request.GET, user=self.request.user)
         if form.is_valid():
@@ -140,6 +168,10 @@ class TransactionCreateView(LoginRequiredMixin, generic.CreateView):
         kwargs["user"] = self.request.user
         return kwargs
 
+    def form_valid(self, form: TransactionForm) -> HttpResponse:
+        form.instance.created_by = self.request.user
+        return super().form_valid(form)
+
 
 class TransactionUpdateView(LoginRequiredMixin, generic.UpdateView):
     model = Transaction
@@ -153,7 +185,7 @@ class TransactionUpdateView(LoginRequiredMixin, generic.UpdateView):
         return kwargs
 
     def get_queryset(self) -> QuerySet[Transaction]:
-        return Transaction.objects.filter(account__owner=self.request.user)
+        return transactions_for_user(self.request.user)
 
 
 class TransactionDeleteView(LoginRequiredMixin, generic.DeleteView):
@@ -162,7 +194,7 @@ class TransactionDeleteView(LoginRequiredMixin, generic.DeleteView):
     success_url = reverse_lazy("finance:transaction-list")
 
     def get_queryset(self) -> QuerySet[Transaction]:
-        return Transaction.objects.filter(account__owner=self.request.user)
+        return transactions_for_user(self.request.user)
 
 
 class CategoryListView(LoginRequiredMixin, generic.ListView):
@@ -229,7 +261,14 @@ class AccountListView(LoginRequiredMixin, generic.ListView):
     paginate_by = 10
 
     def get_queryset(self) -> QuerySet[Account]:
-        return Account.objects.filter(owner=self.request.user).order_by("name")
+        return accounts_for_user(self.request.user).order_by("name")
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["owner_account_ids"] = set(
+            owner_accounts_for_user(self.request.user).values_list("pk", flat=True)
+        )
+        return context
 
 
 class AccountCreateView(LoginRequiredMixin, generic.CreateView):
@@ -250,7 +289,7 @@ class AccountUpdateView(LoginRequiredMixin, generic.UpdateView):
     success_url = reverse_lazy("finance:account-list")
 
     def get_queryset(self) -> QuerySet[Account]:
-        return Account.objects.filter(owner=self.request.user)
+        return owner_accounts_for_user(self.request.user)
 
 
 class AccountDeleteView(LoginRequiredMixin, generic.DeleteView):
@@ -259,7 +298,146 @@ class AccountDeleteView(LoginRequiredMixin, generic.DeleteView):
     success_url = reverse_lazy("finance:account-list")
 
     def get_queryset(self) -> QuerySet[Account]:
-        return Account.objects.filter(owner=self.request.user)
+        return owner_accounts_for_user(self.request.user)
+
+
+class AccountDetailView(LoginRequiredMixin, generic.DetailView):
+    model = Account
+    template_name = "finance/account_detail.html"
+    context_object_name = "account"
+
+    def get_queryset(self) -> QuerySet[Account]:
+        return accounts_for_user(self.request.user)
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["is_account_owner"] = AccountMembership.objects.filter(
+            account=self.object,
+            user=self.request.user,
+            role=AccountMembership.Role.OWNER,
+        ).exists()
+        return context
+
+
+class AccountInviteView(LoginRequiredMixin, generic.FormView):
+    form_class = AccountInvitationForm
+    template_name = "finance/account_invite.html"
+
+    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.account = get_object_or_404(
+            owner_accounts_for_user(request.user),
+            pk=kwargs["pk"],
+        )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["account"] = self.account
+        return context
+
+    def form_valid(self, form: AccountInvitationForm) -> HttpResponse:
+        value = form.cleaned_data["username_or_email"].strip()
+        invited_user = Owner.objects.filter(
+            models.Q(username=value) | models.Q(email=value)
+        ).first()
+
+        if invited_user and invited_user != self.request.user:
+            is_member = AccountMembership.objects.filter(
+                account=self.account,
+                user=invited_user,
+            ).exists()
+            has_pending_invitation = AccountInvitation.objects.filter(
+                account=self.account,
+                invited_user=invited_user,
+                status=AccountInvitation.Status.PENDING,
+            ).exists()
+            if not is_member and not has_pending_invitation:
+                AccountInvitation.objects.create(
+                    account=self.account,
+                    invited_user=invited_user,
+                    invited_by=self.request.user,
+                )
+
+        messages.info(self.request, GENERIC_INVITATION_RESPONSE)
+        return redirect("finance:account-detail", pk=self.account.pk)
+
+
+class AccountMembersView(LoginRequiredMixin, generic.ListView):
+    model = AccountMembership
+    template_name = "finance/account_members.html"
+    context_object_name = "memberships"
+
+    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.account = get_object_or_404(
+            owner_accounts_for_user(request.user),
+            pk=kwargs["pk"],
+        )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self) -> QuerySet[AccountMembership]:
+        return AccountMembership.objects.filter(account=self.account).select_related("user")
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["account"] = self.account
+        return context
+
+
+class AccountMemberRemoveView(LoginRequiredMixin, generic.View):
+    def post(self, request: HttpRequest, account_pk: int, membership_pk: int) -> HttpResponse:
+        account = get_object_or_404(owner_accounts_for_user(request.user), pk=account_pk)
+        membership = get_object_or_404(
+            AccountMembership,
+            pk=membership_pk,
+            account=account,
+        )
+        if membership.role != AccountMembership.Role.OWNER:
+            membership.delete()
+        return redirect("finance:account-members", pk=account.pk)
+
+
+class InvitationListView(LoginRequiredMixin, generic.ListView):
+    model = AccountInvitation
+    template_name = "finance/invitation_list.html"
+    context_object_name = "invitations"
+
+    def get_queryset(self) -> QuerySet[AccountInvitation]:
+        return AccountInvitation.objects.filter(
+            invited_user=self.request.user,
+            status=AccountInvitation.Status.PENDING,
+        ).select_related("account", "invited_by")
+
+
+class InvitationAcceptView(LoginRequiredMixin, generic.View):
+    def post(self, request: HttpRequest, pk: int) -> HttpResponse:
+        invitation = get_object_or_404(
+            AccountInvitation,
+            pk=pk,
+            invited_user=request.user,
+            status=AccountInvitation.Status.PENDING,
+        )
+        with db_transaction.atomic():
+            AccountMembership.objects.get_or_create(
+                account=invitation.account,
+                user=request.user,
+                defaults={"role": AccountMembership.Role.MEMBER},
+            )
+            invitation.status = AccountInvitation.Status.ACCEPTED
+            invitation.save(update_fields=["status", "updated_at"])
+        return redirect("finance:invitation-list")
+
+
+class InvitationRejectView(LoginRequiredMixin, generic.View):
+    def post(self, request: HttpRequest, pk: int) -> HttpResponse:
+        invitation = get_object_or_404(
+            AccountInvitation,
+            pk=pk,
+            invited_user=request.user,
+            status=AccountInvitation.Status.PENDING,
+        )
+        invitation.status = AccountInvitation.Status.REJECTED
+        invitation.save(update_fields=["status", "updated_at"])
+        return redirect("finance:invitation-list")
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -269,7 +447,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
 
-        transactions = Transaction.objects.filter(account__owner=user)
+        transactions = transactions_for_user(user)
 
         total_expense = (
                 transactions.filter(
@@ -284,7 +462,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 or 0
         )
         total_balance = (
-                Account.objects.filter(owner=user).aggregate(total=Sum("balance"))["total"] or 0
+                accounts_for_user(user).aggregate(total=Sum("balance"))["total"] or 0
         )
 
         # Розбивка витрат по категоріях (для donut-чарту витрат)
