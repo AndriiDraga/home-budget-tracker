@@ -18,12 +18,16 @@
         <tbody>
             {% for account in account_list %}
             <tr>
-                <td>{{ account.name }}</td>
+                <td><a href="{% url 'finance:account-detail' account.pk %}">{{ account.name }}</a></td>
                 <td><span class="badge bg-secondary">{{ account.account_type }}</span></td>
                 <td>{{ account.balance }}</td>
                 <td class="text-end">
+                    {% if account.pk in owner_account_ids %}
+                    <a href="{% url 'finance:account-invite' account.pk %}" class="btn btn-sm btn-outline-primary">Invite</a>
+                    <a href="{% url 'finance:account-members' account.pk %}" class="btn btn-sm btn-outline-secondary">Members</a>
                     <a href="{% url 'finance:account-update' account.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
                     <a href="{% url 'finance:account-delete' account.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}

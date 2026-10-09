@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Members: {{ account.name }}</h2>
+    <a href="{% url 'finance:account-detail' account.pk %}" class="btn btn-outline-secondary">Back</a>
+</div>
+
+<div class="card shadow-sm">
+    <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>User</th>
+                <th>Role</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for membership in memberships %}
+            <tr>
+                <td>{{ membership.user.username }}</td>
+                <td>{{ membership.role }}</td>
+                <td class="text-end">
+                    {% if membership.role != "owner" %}
+                    <form method="post" action="{% url 'finance:account-member-remove' account.pk membership.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-muted py-4">No members.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
