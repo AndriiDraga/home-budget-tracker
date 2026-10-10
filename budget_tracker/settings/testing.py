@@ -11,19 +11,33 @@ Or pass it inline:
     python manage.py test finance --settings=budget_tracker.settings.testing
 """
 
+import os
+
 from .base import *  # noqa: F401,F403
 
 DEBUG = False
 
 ALLOWED_HOSTS = ["testserver", "localhost"]
 
-# In-memory SQLite: fastest option for 54 tests, no file created/torn down.
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
+if os.environ.get("USE_POSTGRES_FOR_TESTS") == "1":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ["POSTGRES_DB"],
+            "USER": os.environ["POSTGRES_USER"],
+            "PASSWORD": os.environ["POSTGRES_PASSWORD"],
+            "HOST": os.environ["POSTGRES_HOST"],
+            "PORT": int(os.environ["POSTGRES_DB_PORT"]),
+        }
     }
-}
+else:
+    # In-memory SQLite: fastest option for local tests, no file created/torn down.
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
 
 # MD5 is drastically faster than the default PBKDF2 hasher - password
 # hashing security doesn't matter for test-only data.
