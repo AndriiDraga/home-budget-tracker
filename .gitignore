@@ -10,3 +10,6 @@ db.sqlite3
 .coverage
 htmlcov/
 staticfiles/
+
+# Local Docker secrets
+.env.docker
