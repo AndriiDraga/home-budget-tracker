@@ -13,3 +13,11 @@ staticfiles/
 
 # Local Docker secrets
 .env.docker
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+*.tfplan
+crash.log

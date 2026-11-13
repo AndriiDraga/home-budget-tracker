@@ -14,8 +14,14 @@ from .base import *  # noqa: F401,F403
 
 DEBUG = os.getenv('DJANGO_DEBUG', '0') == '1'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'web', 'nginx']
-CSRF_TRUSTED_ORIGINS = ['http://localhost:8080', 'http://127.0.0.1:8080']
+# Defaults suit local Docker Compose; on a server (Terraform user_data)
+# the public IP is passed via environment variables.
+ALLOWED_HOSTS = os.getenv(
+    'DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,web,nginx'
+).split(',')
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    'DJANGO_CSRF_TRUSTED_ORIGINS', 'http://localhost:8080,http://127.0.0.1:8080'
+).split(',')
 
 DATABASES = {
     'default': {
