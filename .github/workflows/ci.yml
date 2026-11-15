@@ -69,3 +69,29 @@ jobs:
 
       - name: Coverage report
         run: coverage report -m --fail-under=90
+
+  terraform:
+    name: Terraform checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Format check
+        run: terraform fmt -check -recursive
+
+      - name: Init (without backend)
+        run: terraform init -backend=false
+
+      - name: Validate
+        run: terraform validate
+
+      - name: Infrastructure tests (mock AWS provider)
+        run: terraform test

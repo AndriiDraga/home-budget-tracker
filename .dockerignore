@@ -1,0 +1,14 @@
+.git
+.github
+.venv
+venv
+__pycache__
+*.pyc
+.env
+.env.*
+!.env.docker.example
+*.sqlite3
+.coverage
+htmlcov
+staticfiles
+infra

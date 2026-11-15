@@ -1,0 +1,36 @@
+#!/bin/bash
+# Перший запуск EC2: Docker + docker compose + Home Budget Tracker.
+# Шаблон обробляє Terraform (templatefile): конструкції з $ і фігурними дужками -
+# це значення Terraform; змінні оболонки записано без фігурних дужок.
+set -euo pipefail
+
+dnf install -y docker git
+systemctl enable --now docker
+
+# Плагін docker compose
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -fsSL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+# Код застосунку
+git clone --depth 1 --branch "${git_branch}" "${repo_url}" /opt/budget-tracker
+cd /opt/budget-tracker
+
+# Публічна IP-адреса з метаданих (IMDSv2) - для ALLOWED_HOSTS і CSRF
+TOKEN=$(curl -fsS -X PUT http://169.254.169.254/latest/api/token -H "X-aws-ec2-metadata-token-ttl-seconds: 60")
+PUBLIC_IP=$(curl -fsS -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/public-ipv4)
+
+# Секрети потрапляють лише у файл на сервері з правами 600
+umask 077
+cat > .env.docker <<EOF
+SECRET_KEY=${secret_key}
+DJANGO_DEBUG=0
+DJANGO_ALLOWED_HOSTS=$PUBLIC_IP,localhost,127.0.0.1,web,nginx
+DJANGO_CSRF_TRUSTED_ORIGINS=http://$PUBLIC_IP:${app_port}
+POSTGRES_DB=budget_tracker
+POSTGRES_USER=budget_tracker
+POSTGRES_PASSWORD=${db_password}
+EOF
+
+docker compose up -d --build

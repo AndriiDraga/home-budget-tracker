@@ -1,0 +1,4 @@
+# Скопіювати до terraform.tfvars і вписати власні значення.
+# terraform.tfvars ігнорується Git - реальні секрети не комітити.
+secret_key  = "replace-with-a-random-string-of-at-least-32-chars"
+db_password = "replace-with-db-password"
